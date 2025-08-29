@@ -9,39 +9,18 @@ commands.add_command("calculate", nil, function(command)
     local night_start = surface.evening
     local sunrise_start = surface.morning
 
-    local sunset_len = surface.ticks_per_day * (night_start - sunset_start)
-    local night_len = surface.ticks_per_day * (sunrise_start - night_start)
-    local sunrise_len = surface.ticks_per_day * (day_start - sunrise_start)
-    local day_len = surface.ticks_per_day
+    local sunset_len = (surface.ticks_per_day * (night_start - sunset_start)) / ticks_per_day
+    local night_len = surface.ticks_per_day * (sunrise_start - night_start) / ticks_per_day
+    local sunrise_len = surface.ticks_per_day * (day_start - sunrise_start) / ticks_per_day
+    local day_len = 1
         - sunset_len
         - night_len
         - sunrise_len
 
-    -- Log the results
-    game.print("=== Solar Cycle Durations ===")
-    game.print(string.format("Total ticks per day: %d", ticks_per_day))
-    game.print("")
+    local accu_charge = 5000
+    local solar_power = 60
 
-    -- Display durations with both ticks and percentage
-    game.print(string.format("Dawn duration (sunrise): %d ticks (%.2f%% of day)",
-        sunrise_len, (sunrise_len / ticks_per_day) * 100))
-    game.print(string.format("Day duration (full light): %d ticks (%.2f%% of day)",
-        day_len, (day_len / ticks_per_day) * 100))
-    game.print(string.format("Dusk duration (sunset): %d ticks (%.2f%% of day)",
-        sunset_len, (sunset_len / ticks_per_day) * 100))
-    game.print(string.format("Night duration (darkness): %d ticks (%.2f%% of day)",
-        night_len, (night_len / ticks_per_day) * 100))
-    game.print("")
-
-    -- Verify our calculations add up to a full day
-    local total_duration = sunrise_len + day_len + sunset_len + night_len
-    local difference = math.abs(total_duration - ticks_per_day)
-    if difference < 1 then
-        game.print(string.format("✓ Verification passed: Total = %d ticks (difference: %.2f)",
-            total_duration, difference))
-    else
-        game.print(string.format("⚠ Warning: Total = %d ticks, expected %d (difference: %.2f)",
-            total_duration, ticks_per_day, difference))
-    end
-    game.print("")
+    local ratio = ((day_len + sunrise_len / 2 + sunset_len / 2) * (night_len + (sunrise_len + sunset_len) / 2 * ((day_len + sunrise_len / 2 + sunset_len / 2) / 1))) *
+        (ticks_per_day / 60) * (solar_power * surface.solar_power_multiplier / accu_charge)
+    game.print(ratio)
 end)
