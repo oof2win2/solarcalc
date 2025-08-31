@@ -1,0 +1,10 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.0.2
+Date: ????
+  Bugfixes:
+    - Fix crash when importing into an existing save with existing players
+---------------------------------------------------------------------------------------------------
+Version: 0.0.1
+Date: 2025-08-31
+  Features:
+    - Calculator for solar power for multiple surfaces

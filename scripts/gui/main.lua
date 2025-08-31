@@ -84,7 +84,8 @@ function main_gui.build(player_index)
     textinput.style.horizontal_align = "right"
     local selected_unit_index = 1
     if storage.preferences[player.index].power_requirement_unit == "GW" then selected_unit_index = 2 end
-    controls_flow.add { type = "drop-down", items = {"MW", "GW"}, selected_index = selected_unit_index, name = "solarcalc_power_requirement_input_unit" }
+    local power_unit_toggle = controls_flow.add { type = "drop-down", items = {"MW", "GW"}, selected_index = selected_unit_index, name = "solarcalc_power_requirement_input_unit" }
+    power_unit_toggle.style.width = 80
 
     -- content_frame.add { type = "line"}
     local output_flow = content_frame.add { type = "flow", name = "output_flow", direction = "horizontal", style = "solarcalc_controls_flow" }
@@ -264,10 +265,30 @@ local function on_player_created(event)
     main_gui.recompute_all_data(event.player_index)
 end
 
-function main_gui.on_init(event)
+function main_gui.on_init()
     storage.guis = {}
     storage.preferences = {}
     storage.computations = {}
+
+    for _, player in pairs(game.players) do
+        storage.preferences[player.index] = {
+            solar_panel_name = "solar-panel",
+            accumulator_name = "accumulator",
+            surface_index = player.surface_index,
+            power_requirement = 1,
+            power_requirement_unit = "MW"
+        }
+    end
+
+    for _, player in pairs(game.players) do
+        storage.computations[player.index] = {
+            solar_ratio = 0,
+            panels_required = 0,
+            accumulators_required = 0
+        }
+
+        main_gui.recompute_all_data(player.index)
+    end
 end
 
 main_gui.events = {
