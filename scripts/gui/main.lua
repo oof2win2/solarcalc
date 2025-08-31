@@ -20,7 +20,7 @@ function main_gui.build(player_index)
         direction = "vertical"
     }
 
-    window.style.size = { 455, 165 }
+    window.style.size = { 535, 195 }
     window.auto_center = true
 
     local header = window.add {
@@ -47,6 +47,23 @@ function main_gui.build(player_index)
     local content_frame = window.add { type = "frame", name = "content_frame", direction = "vertical", style = "solarcalc_content_frame" }
     local controls_flow = content_frame.add { type = "flow", name = "controls_flow", direction = "horizontal", style = "solarcalc_controls_flow" }
 
+    local selected_index = -1
+    local player_surface = storage.preferences[player_index].surface_index
+    local surfaces = {}
+    local i = 1
+    for _, surface in pairs(game.surfaces) do
+        if surface.index == player_surface then selected_index = i
+        else i = i + 1 end
+        table.insert(surfaces, surface.name)
+    end
+    
+    controls_flow.add {
+        type = "drop-down",
+        name = "solarcalc_surface_selector",
+        items = surfaces,
+        selected_index = selected_index
+    }
+
     controls_flow.add {
         type = "choose-elem-button",
         name = "solarcalc_solarpanel_selector",
@@ -61,22 +78,33 @@ function main_gui.build(player_index)
         item = storage.preferences[player_index].accumulator_name,
         elem_filters = {{ filter = "place-result", elem_filters = {{ filter = "type", type = "accumulator" }} }}
     }
+
     local textinput = controls_flow.add { type = "textfield", name = "solarcalc_power_requirement_input", numeric = true, text = "1" }
     textinput.style.width = 64
     textinput.style.horizontal_align = "right"
-    controls_flow.add { type = "drop-down", items = {"MW", "GW"}, selected_index = 1 }
+    local selected_unit_index = 1
+    if storage.preferences[player.index].power_requirement_unit == "GW" then selected_unit_index = 2 end
+    controls_flow.add { type = "drop-down", items = {"MW", "GW"}, selected_index = selected_unit_index, name = "solarcalc_power_requirement_input_unit" }
 
     -- content_frame.add { type = "line"}
     local output_flow = content_frame.add { type = "flow", name = "output_flow", direction = "horizontal", style = "solarcalc_controls_flow" }
-    output_flow.add { type ="label",  caption = "Solar Ratio" }
-    output_flow.add { type = "label", caption = string.format("%.3f", storage.computations[player_index].solar_ratio), name = "solarcalc-ratio-output" }
-    output_flow.add { type = "label", caption = tostring(math.ceil(storage.computations[player_index].panels_required)), name = "solarcalc-panels-required" }
-    output_flow.add { type = "label", caption = tostring(math.ceil(storage.computations[player_index].accumulators_required)), name = "solarcalc-accumulators-required" }
+    local output_table = output_flow.add {
+        type = "table",
+        column_count = 2,
+        draw_horizontal_lines = true,
+        vertical_centering = false
+    }
+    output_table.add { type = "label", caption = "Solar Ratio" }
+    output_table.add { type = "label", caption = string.format("%.3f", storage.computations[player_index].solar_ratio), name = "solarcalc-ratio-output" }
+    output_table.add { type = "label", caption = "Solar panel count" }
+    output_table.add { type = "label", caption = tostring(string.format("%.3f", storage.computations[player_index].panels_required)), name = "solarcalc-panels-required" }
+    output_table.add { type = "label", caption = "Accumulator count" }
+    output_table.add { type = "label", caption = tostring(string.format("%.3f", storage.computations[player_index].accumulators_required)), name = "solarcalc-accumulators-required" }
 
 
     local self = {
         window = window,
-        output_flow = output_flow
+        output_flow = output_table
     }
     storage.guis[player.index] = self
 
@@ -103,13 +131,13 @@ function main_gui.recompute_ratio(player_index)
     if solar_panel_name ~= nil and accumulator_name ~= nil and surface_index ~= nil then
         ratio = compute_ratio{
             solar_panel_name = solar_panel_name,
-            surface = game.get_surface(surface_index),
+            surface = game.surfaces[surface_index],
             accumulator_name = accumulator_name
         }
     end
 
     if storage.guis[player_index] then
-        storage.guis[player_index].output_flow["solarcalc-ratio-output"].caption = tostring(ratio)
+        storage.guis[player_index].output_flow["solarcalc-ratio-output"].caption = string.format("%.3f", ratio)
     end
 
     storage.computations[player_index].solar_ratio = ratio
@@ -125,8 +153,10 @@ function main_gui.recompute_outputs(player_index)
     if unit == "GW" then requested_power_kw = requested_power_kw * 1000 end
 
     local solar_panel_name = storage.preferences[player_index].solar_panel_name
+    if solar_panel_name == nil then return end
     local solar_power_kw = prototypes.entity[solar_panel_name].get_max_energy_production() * 60 / 1000
     local accumulator_name = storage.preferences[player_index].accumulator_name
+    if accumulator_name == nil then return end
     local accumulator_charge = prototypes.entity[accumulator_name].electric_energy_source_prototype.buffer_capacity / 1000
 
     local day_start = surface.dawn
@@ -156,8 +186,8 @@ function main_gui.recompute_outputs(player_index)
 
     if storage.guis[player_index] then
         local output_flow = storage.guis[player_index].output_flow
-        output_flow["solarcalc-panels-required"].caption = tostring(math.ceil(solar_panel_count))
-        output_flow["solarcalc-accumulators-required"].caption = tostring(math.ceil(accumulator_count))
+        output_flow["solarcalc-panels-required"].caption = tostring(string.format("%.3f",solar_panel_count))
+        output_flow["solarcalc-accumulators-required"].caption = tostring(string.format("%.3f",accumulator_count))
     end
 end
 
@@ -199,6 +229,23 @@ local function on_gui_elem_changed(event)
     end
 end
 
+--- @param event EventData.on_gui_selection_state_changed
+local function on_gui_selection_state_changed(event)
+    if event.element.name == "solarcalc_surface_selector" then
+        local selected = event.element.items[event.element.selected_index]
+        local surface = game.get_surface(selected)
+        if not surface then return end
+        storage.preferences[event.player_index].surface_index = surface.index
+        main_gui.recompute_all_data(event.player_index)
+    end
+
+    if event.element.name == "solarcalc_power_requirement_input_unit" then
+        local selected = event.element.items[event.element.selected_index]
+        storage.preferences[event.player_index].power_requirement_unit = selected
+        main_gui.recompute_all_data(event.player_index)
+    end
+end
+
 local function on_player_created(event)
     local surface_index = game.get_player(event.player_index).surface_index
     storage.preferences[event.player_index] = {
@@ -228,6 +275,7 @@ main_gui.events = {
     [defines.events.on_gui_click] = on_gui_click,
     [defines.events.on_gui_elem_changed] = on_gui_elem_changed,
     [defines.events.on_player_created] = on_player_created,
+    [defines.events.on_gui_selection_state_changed] = on_gui_selection_state_changed
 }
 
 return main_gui

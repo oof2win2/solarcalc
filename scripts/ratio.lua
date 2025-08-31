@@ -1,5 +1,8 @@
+--- @param params {surface: LuaSurface, solar_panel_name: string, accumulator_name: string}
+--- @returns number
 local function compute_ratio(params)
     local surface = params.surface
+    if surface.always_day then return 1 end
     -- get solar power output in kW
     local solar_power = prototypes.entity[params.solar_panel_name].get_max_energy_production() * 60 / 1000
     -- accu buffer capacity in kJ
