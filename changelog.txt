@@ -1,7 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.3
 Date: ????
-  Changes:
+  Bugfixes:
+    - Fix a crash when removing the requested power value. Will instead keep the previous value
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.2
 Date: 2025-08-31

@@ -201,6 +201,8 @@ end
 local function on_gui_text_changed(event)
     if event.element.name == "solarcalc_power_requirement_input" then
         local value = tonumber(event.element.text)
+        -- if value is not present (removed), zero, or removed then keep old value and return
+        if value == nil or value == 0 or value < 0 then return end
         storage.preferences[event.player_index].power_requirement = value
         main_gui.recompute_outputs(event.player_index)
     end
